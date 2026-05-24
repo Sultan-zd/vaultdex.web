@@ -1,394 +1,1314 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VaultDex — Scanner de Sécurité Android | Audit APK Automatisé</title>
-  <meta name="description" content="VaultDex est un scanner de sécurité automatisé pour applications Android. Analysez le stockage local des APK et détectez les vulnérabilités : mots de passe en clair, tokens API exposés, bases de données non chiffrées.">
-  <meta name="keywords" content="android security, APK scanner, vulnerability detection, mobile security, VaultDex">
-  <meta property="og:title" content="VaultDex — Scanner de Sécurité Android">
-  <meta property="og:description" content="Analysez et sécurisez vos applications Android avec 28 règles de sécurité automatisées.">
-  <meta property="og:type" content="website">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
-  <link rel="stylesheet" href="style.css">
+  <title>VaultDex — Audit Automatisé de Sécurité Android</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --surface-2: #eef1f5;
+      --card: #ffffff;
+      --border: rgba(0, 0, 0, 0.07);
+      --border-md: rgba(0, 0, 0, 0.12);
+      --accent: #0a9e91;
+      --accent-light: rgba(10, 158, 145, 0.1);
+      --accent-glow: rgba(10, 158, 145, 0.2);
+      --amber: #d97706;
+      --amber-light: rgba(217, 119, 6, 0.1);
+      --red: #dc2626;
+      --red-light: rgba(220, 38, 38, 0.08);
+      --text: #111827;
+      --text-2: #374151;
+      --muted: #6b7280;
+      --subtle: #d1d5db;
+      --code-bg: #1e2530;
+      --code-text: #e2e8f0;
+      --nav-bg: rgba(244, 246, 248, 0.85);
+      --score-fill: #0a9e91;
+    }
+    [data-theme="dark"] {
+      --bg: #0d1117;
+      --surface: #141c26;
+      --surface-2: #1c2636;
+      --card: #1a2333;
+      --border: rgba(255, 255, 255, 0.07);
+      --border-md: rgba(255, 255, 255, 0.13);
+      --accent: #0fcebd;
+      --accent-light: rgba(15, 206, 189, 0.1);
+      --accent-glow: rgba(15, 206, 189, 0.15);
+      --amber: #f59e0b;
+      --amber-light: rgba(245, 158, 11, 0.1);
+      --red: #f87171;
+      --red-light: rgba(248, 113, 113, 0.1);
+      --text: #e6edf3;
+      --text-2: #c9d1d9;
+      --muted: #7d8590;
+      --subtle: #30363d;
+      --code-bg: #0d1117;
+      --code-text: #e6edf3;
+      --nav-bg: rgba(13, 17, 23, 0.85);
+      --score-fill: #0fcebd;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      overflow-x: hidden;
+      transition: background 0.35s, color 0.35s;
+    }
+
+    /* Dot grid bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, var(--border-md) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ─── NAV ─── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: var(--nav-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem; height: 60px;
+      transition: background 0.35s;
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px;
+      color: var(--text); text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo .logo-mark {
+      width: 32px; height: 32px; background: var(--accent);
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+    }
+    .nav-logo .logo-mark svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-version {
+      font-size: 0.7rem; font-weight: 500; color: var(--muted);
+      background: var(--surface-2); border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 20px; letter-spacing: 0.3px;
+    }
+    .nav-links { display: flex; align-items: center; gap: 2rem; }
+    .nav-links a {
+      font-size: 0.9rem; font-weight: 500; color: var(--muted);
+      text-decoration: none; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .theme-btn {
+      background: var(--surface-2); border: 1px solid var(--border-md);
+      color: var(--muted); padding: 6px 14px; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+    }
+    .theme-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ─── LAYOUT ─── */
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 2.5rem; position: relative; z-index: 1; }
+    section { padding: 6rem 0; }
+    section:first-child { padding-top: 5rem; }
+
+    .section-eyebrow {
+      font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--accent); margin-bottom: 0.6rem;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-eyebrow::before {
+      content: ''; display: block; width: 24px; height: 2px;
+      background: var(--accent); border-radius: 2px;
+    }
+    h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.1rem; font-weight: 700; letter-spacing: -0.5px;
+      line-height: 1.2; margin-bottom: 1.2rem; color: var(--text);
+    }
+    .section-lead { font-size: 1.05rem; color: var(--muted); max-width: 640px; line-height: 1.75; }
+
+    /* ─── HERO ─── */
+    #hero { padding: 5rem 0 4rem; }
+    .hero-inner {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent-light); border: 1px solid var(--accent);
+      color: var(--accent); font-size: 0.78rem; font-weight: 600;
+      padding: 5px 14px; border-radius: 20px; letter-spacing: 0.3px;
+      margin-bottom: 1.5rem;
+    }
+    .hero-badge svg { width: 12px; height: 12px; fill: currentColor; }
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 3.4rem; font-weight: 800; letter-spacing: -1.5px;
+      line-height: 1.05; margin-bottom: 1.25rem; color: var(--text);
+    }
+    h1 em { font-style: normal; color: var(--accent); }
+    .hero-desc { font-size: 1.05rem; color: var(--muted); line-height: 1.75; margin-bottom: 2rem; max-width: 480px; }
+    .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0.65rem 1.4rem; border-radius: 9px; font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem; font-weight: 500; cursor: pointer;
+      text-decoration: none; transition: all 0.2s; border: 1px solid transparent;
+    }
+    .btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { opacity: 0.88; text-decoration: none; transform: translateY(-1px); }
+    .btn-ghost { background: var(--surface-2); color: var(--text-2); border-color: var(--border-md); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--text); text-decoration: none; }
+    .hero-meta { display: flex; gap: 2rem; }
+    .hero-meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .hero-meta-label { font-size: 0.75rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; }
+    .hero-meta-val { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--text); }
+
+    /* ─── HERO MOCKUP ─── */
+    .hero-mockup {
+      position: relative;
+    }
+    .scan-card {
+      background: var(--card); border: 1px solid var(--border-md);
+      border-radius: 16px; padding: 1.5rem;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.15);
+    }
+    .scan-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+    }
+    .scan-card-title { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--text); }
+    .scan-card-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+    .score-badge {
+      display: flex; flex-direction: column; align-items: center;
+      background: var(--red-light); border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 12px; padding: 8px 16px; text-align: center;
+    }
+    .score-num { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--red); line-height: 1; }
+    .score-label { font-size: 0.65rem; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px; }
+
+    .scan-score-bar { margin-bottom: 1.25rem; }
+    .score-bar-track {
+      height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-bottom: 6px;
+    }
+    .score-bar-fill {
+      height: 100%; background: linear-gradient(90deg, var(--accent), #f59e0b, #ef4444);
+      border-radius: 3px; width: 78%;
+      animation: fillBar 1.8s cubic-bezier(0.4,0,0.2,1) both;
+      animation-delay: 0.3s;
+    }
+    @keyframes fillBar { from { width: 0 } to { width: 78% } }
+    .score-bar-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); }
+
+    .findings-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .finding-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid transparent;
+    }
+    .finding-row.critical { background: var(--red-light); border-color: rgba(248,113,113,0.2); }
+    .finding-row.high { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2); }
+    .finding-row.medium { background: rgba(59,130,246,0.07); border-color: rgba(59,130,246,0.15); }
+    .finding-row.low { background: rgba(15,206,189,0.07); border-color: rgba(15,206,189,0.15); }
+    .finding-label { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 600; }
+    .finding-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .critical .finding-dot { background: var(--red); }
+    .high .finding-dot { background: var(--amber); }
+    .medium .finding-dot { background: #3b82f6; }
+    .low .finding-dot { background: var(--accent); }
+    .critical .finding-label { color: var(--red); }
+    .high .finding-label { color: var(--amber); }
+    .medium .finding-label { color: #3b82f6; }
+    .low .finding-label { color: var(--accent); }
+    .finding-count { font-family: 'DM Mono', monospace; font-size: 0.82rem; font-weight: 500; color: var(--text-2); }
+
+    .terminal-mini {
+      background: var(--code-bg); border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .terminal-bar-mini {
+      background: rgba(255,255,255,0.04); padding: 8px 12px;
+      display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border);
+    }
+    .tdot { width: 10px; height: 10px; border-radius: 50%; }
+    .tdot-r { background: #ff5f57; } .tdot-y { background: #febc2e; } .tdot-g { background: #28c840; }
+    .terminal-body { padding: 12px 14px; font-family: 'DM Mono', monospace; font-size: 0.72rem; line-height: 1.9; }
+    .terminal-body .tl { color: var(--code-text); opacity: 0.4; }
+    .terminal-body .tl.ok { opacity: 1; color: #6bcb77; }
+    .terminal-body .tl.wait { opacity: 1; color: var(--amber); }
+    .terminal-body .tl.done { opacity: 1; color: var(--accent); }
+    .terminal-body .tl .prompt { color: var(--accent); opacity: 0.7; }
+
+    /* Animate terminal lines in */
+    .tl { animation: lineIn 0.4s ease both; }
+    .tl:nth-child(1) { animation-delay: 0.5s; }
+    .tl:nth-child(2) { animation-delay: 1.0s; }
+    .tl:nth-child(3) { animation-delay: 1.5s; }
+    .tl:nth-child(4) { animation-delay: 2.0s; }
+    .tl:nth-child(5) { animation-delay: 2.5s; }
+    .tl:nth-child(6) { animation-delay: 3.0s; }
+    .tl:nth-child(7) { animation-delay: 3.5s; }
+    .tl:nth-child(8) { animation-delay: 4.0s; }
+    @keyframes lineIn {
+      from { opacity: 0; transform: translateX(-4px); }
+      to { /* uses class opacity */ transform: translateX(0); }
+    }
+
+    /* ─── STATS STRIP ─── */
+    .stats-strip {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--border-md); border-radius: 16px;
+      background: var(--card); overflow: hidden;
+      margin: 0 0 6rem;
+    }
+    .stat-block {
+      padding: 2rem 2.5rem; position: relative;
+    }
+    .stat-block + .stat-block { border-left: 1px solid var(--border); }
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.8rem; font-weight: 800; letter-spacing: -1px;
+      color: var(--accent); line-height: 1; margin-bottom: 0.5rem;
+    }
+    .stat-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.3rem; }
+    .stat-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+
+    /* ─── PROBLEM ─── */
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2.5rem; }
+    .code-block {
+      background: var(--code-bg); border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .code-block-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; background: rgba(255,255,255,0.04); border-bottom: 1px solid var(--border);
+    }
+    .code-file { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+    .code-severity {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; padding: 2px 8px; border-radius: 4px;
+    }
+    .sev-critical { background: var(--red-light); color: var(--red); }
+    .sev-high { background: var(--amber-light); color: var(--amber); }
+    .code-content { padding: 1rem 1.25rem; font-family: 'DM Mono', monospace; font-size: 0.78rem; line-height: 1.75; color: var(--code-text); }
+    .code-hl { color: var(--red); background: rgba(248,113,113,0.1); border-radius: 3px; padding: 1px 3px; }
+    .code-hl-amber { color: var(--amber); background: var(--amber-light); border-radius: 3px; padding: 1px 3px; }
+    .code-key { color: #7ec8e3; }
+    .code-str { color: #a8d8a8; }
+    .code-comment { color: var(--muted); }
+
+    .problem-impact {
+      margin-top: 2rem; padding: 1.5rem 2rem;
+      background: var(--amber-light); border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 12px; display: flex; align-items: flex-start; gap: 1rem;
+    }
+    .impact-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+    .impact-text { font-size: 0.92rem; color: var(--text-2); line-height: 1.65; }
+    .impact-text strong { color: var(--amber); }
+
+    /* ─── SOLUTION ─── */
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2.5rem; }
+    .feature-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem 1.4rem;
+      transition: all 0.25s;
+    }
+    .feature-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+    .feature-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      background: var(--accent-light); border: 1px solid rgba(15,206,189,0.2);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;
+    }
+    .feature-icon svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .feature-card h3 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text); }
+    .feature-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+    /* ─── PIPELINE ─── */
+    .pipeline-wrapper { margin-top: 2.5rem; }
+    .pipeline-phase-label {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;
+    }
+    .pipeline-phase-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .phase-a-label { color: #3b82f6; }
+    .phase-interaction-label { color: var(--amber); }
+    .phase-b-label { color: var(--accent); }
+
+    .pipeline-steps { display: flex; gap: 0; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 4px; }
+    .pipeline-step {
+      display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 90px;
+      position: relative;
+    }
+    .pipeline-step:not(:last-child)::after {
+      content: '→'; position: absolute; right: -8px; top: 13px;
+      color: var(--subtle); font-size: 0.75rem; z-index: 1;
+    }
+    .step-pill {
+      padding: 6px 12px; border-radius: 20px; font-family: 'DM Mono', monospace;
+      font-size: 0.7rem; font-weight: 500; text-align: center; white-space: nowrap;
+      border: 1px solid transparent; margin-bottom: 6px;
+    }
+    .step-desc { font-size: 0.68rem; color: var(--muted); text-align: center; line-height: 1.35; max-width: 80px; }
+    .pill-a { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.25); color: #60a5fa; }
+    .pill-int { background: var(--amber-light); border-color: rgba(245,158,11,0.3); color: var(--amber); }
+    .pill-b { background: var(--accent-light); border-color: rgba(15,206,189,0.25); color: var(--accent); }
+    .pill-done { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.25); color: #4ade80; }
+
+    /* ─── ARCHITECTURE ─── */
+    .arch-diagram-2 {
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 0;
+      align-items: center; margin-top: 2.5rem;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 2rem; overflow: hidden;
+    }
+    .arch-stack { display: flex; flex-direction: column; gap: 0; }
+    .arch-layer-2 {
+      padding: 1.1rem 1.4rem; border: 1px solid var(--border);
+      background: var(--surface); border-radius: 12px; margin-bottom: 0;
+      transition: border-color 0.2s;
+    }
+    .arch-layer-2:hover { border-color: var(--accent); }
+    .arch-connector { display: flex; flex-direction: column; align-items: center; padding: 0 1.5rem; }
+    .arch-connector-line { flex: 1; width: 1px; background: var(--border); min-height: 20px; }
+    .arch-connector-label { font-size: 0.65rem; color: var(--muted); text-align: center; max-width: 80px; line-height: 1.3; padding: 4px 0; }
+    .arch-layer-title-2 { font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem; }
+    .arch-layer-sub { font-size: 0.75rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+    .arch-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+    .arch-tag {
+      font-size: 0.68rem; font-weight: 500; padding: 2px 8px; border-radius: 4px;
+      background: var(--accent-light); color: var(--accent); border: 1px solid rgba(15,206,189,0.2);
+    }
+    .arch-tag.blue { background: rgba(59,130,246,0.1); color: #60a5fa; border-color: rgba(59,130,246,0.2); }
+    .arch-tag.amber { background: var(--amber-light); color: var(--amber); border-color: rgba(245,158,11,0.2); }
+    .arch-tag.purple { background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2); }
+
+    .arch-side { display: flex; flex-direction: column; gap: 1rem; }
+    .arch-side-card {
+      padding: 0.9rem 1.1rem; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; transition: border-color 0.2s;
+    }
+    .arch-side-card:hover { border-color: var(--accent); }
+    .arch-side-title { font-size: 0.78rem; font-weight: 700; color: var(--text); margin-bottom: 3px; font-family: 'Syne', sans-serif; }
+    .arch-side-sub { font-size: 0.7rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+    .arch-sse-note {
+      margin-top: 1.5rem; padding: 0.9rem 1.2rem;
+      background: var(--accent-light); border: 1px solid rgba(15,206,189,0.2);
+      border-radius: 10px; font-size: 0.8rem; color: var(--accent); line-height: 1.5;
+    }
+
+    /* ─── SECURITY ENGINE ─── */
+    .rules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 2.5rem; }
+    .rule-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem; transition: border-color 0.25s;
+    }
+    .rule-card:hover { border-color: var(--accent); }
+    .rule-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; }
+    .rule-category { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: var(--text); }
+    .rule-badge {
+      font-family: 'DM Mono', monospace; font-size: 0.75rem; font-weight: 500;
+      padding: 4px 10px; border-radius: 6px; flex-shrink: 0;
+    }
+    .rule-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+    .rule-list li { font-size: 0.83rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .rule-list li::before { content: '—'; color: var(--accent); font-size: 0.7rem; flex-shrink: 0; }
+
+    .score-formula {
+      margin-top: 1.5rem; padding: 1.2rem 1.5rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; text-align: center;
+    }
+    .formula-code { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--text-2); }
+    .formula-weights { display: flex; justify-content: center; gap: 2rem; margin-top: 1rem; flex-wrap: wrap; }
+    .weight-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .weight-pts { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800; }
+    .weight-sev { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+
+    /* ─── COMPARISON ─── */
+    .compare-table-wrap {
+      margin-top: 2.5rem; background: var(--card); border: 1px solid var(--border-md);
+      border-radius: 16px; overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); padding: 1rem 1.4rem;
+      border-bottom: 1px solid var(--border); text-align: left;
+      background: var(--surface-2);
+    }
+    th:not(:first-child) { text-align: center; }
+    td { padding: 0.9rem 1.4rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; color: var(--text-2); vertical-align: middle; }
+    td:not(:first-child) { text-align: center; }
+    tr:last-child td { border-bottom: none; }
+    .col-vaultdex { background: var(--accent-light); }
+    .check-yes { color: var(--accent); font-size: 1.1rem; }
+    .check-no { color: var(--subtle); }
+    .check-partial { color: var(--amber); font-size: 0.75rem; font-weight: 600; }
+    .feature-name { font-weight: 500; color: var(--text); }
+    .vd-header { color: var(--accent) !important; font-family: 'Syne', sans-serif; font-size: 0.85rem !important; }
+
+    /* ─── STACK ─── */
+    .stack-groups { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2.5rem; }
+    .stack-group { display: flex; align-items: flex-start; gap: 1.5rem; }
+    .stack-group-label {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--muted); min-width: 90px; padding-top: 8px; flex-shrink: 0;
+    }
+    .stack-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .stack-tag {
+      font-size: 0.84rem; font-weight: 500; padding: 6px 14px; border-radius: 8px;
+      background: var(--surface-2); border: 1px solid var(--border-md);
+      color: var(--text-2); transition: all 0.2s;
+    }
+    .stack-tag:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ─── TEAM ─── */
+    .university-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem 2rem;
+      display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem;
+    }
+    .univ-icon {
+      width: 52px; height: 52px; border-radius: 12px;
+      background: var(--accent-light); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .univ-icon svg { width: 26px; height: 26px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .univ-name { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 3px; }
+    .univ-prog { font-size: 0.85rem; color: var(--muted); }
+
+    .team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .team-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem; text-align: center; transition: all 0.25s;
+    }
+    .team-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+    .avatar {
+      width: 56px; height: 56px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800;
+      margin: 0 auto 1rem; color: #fff;
+    }
+    .av-1 { background: linear-gradient(135deg, #0fcebd, #0a9e91); }
+    .av-2 { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+    .av-3 { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+    .av-4 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .team-name { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
+    .team-role { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+    
+    .team-contact { 
+      margin-top: 0; font-size: 0.75rem; 
+      opacity: 0; transform: translateY(5px);
+      transition: all 0.3s ease; height: 0; overflow: hidden;
+    }
+    .team-card:hover .team-contact { 
+      opacity: 1; transform: translateY(0); height: auto; margin-top: 10px;
+    }
+    .no-contact { color: var(--subtle); font-style: italic; font-size: 0.7rem; }
+    .contact-link { 
+      display: inline-block; background: var(--accent-light); 
+      color: var(--accent); padding: 4px 10px; border-radius: 6px; 
+      font-family: 'DM Mono', monospace; text-decoration: none;
+      animation: pulse 2s infinite; font-weight: 600;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(10, 158, 145, 0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(10, 158, 145, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(10, 158, 145, 0); }
+    }
+
+    .prof-card {
+      margin-top: 2rem; padding: 1.25rem 1.5rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; display: flex; align-items: center; gap: 1rem;
+    }
+    .prof-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 3px; font-weight: 600; }
+    .prof-name { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; }
+    .prof-email { font-size: 0.82rem; color: var(--accent); font-family: 'DM Mono', monospace; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border); padding: 2.5rem 2.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .footer-left { display: flex; align-items: center; gap: 1rem; }
+    .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; color: var(--text); }
+    .footer-meta { font-size: 0.8rem; color: var(--muted); }
+    .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .footer-links a { font-size: 0.82rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--accent); }
+
+    /* ─── SCROLL ANIMATIONS ─── */
+    .reveal {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-d1 { transition-delay: 0.1s; }
+    .reveal-d2 { transition-delay: 0.2s; }
+    .reveal-d3 { transition-delay: 0.3s; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-mockup { display: none; }
+      h1 { font-size: 2.4rem; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .team-grid { grid-template-columns: repeat(2, 1fr); }
+      .rules-grid { grid-template-columns: 1fr; }
+      .arch-diagram-2 { grid-template-columns: 1fr; }
+      .stats-strip { grid-template-columns: 1fr; }
+      .stat-block + .stat-block { border-left: none; border-top: 1px solid var(--border); }
+    }
+    @media (max-width: 600px) {
+      .container { padding: 0 1.25rem; }
+      nav { padding: 0 1.25rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .team-grid { grid-template-columns: 1fr 1fr; }
+      .problem-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      h1 { font-size: 2rem; }
+      h2 { font-size: 1.6rem; }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Background Effects -->
-  <div class="bg-grid"></div>
-  <div class="bg-orb bg-orb--cyan"></div>
-  <div class="bg-orb bg-orb--purple"></div>
-
-  <!-- ===== NAVBAR ===== -->
-  <nav class="navbar" id="navbar">
-    <div class="container">
-      <a href="#" class="nav-logo">
-        <span class="logo-icon">🛡️</span>
-        <span>Vault<span class="gradient-text">Dex</span></span>
-      </a>
-      <div class="nav-links" id="navLinks">
-        <a href="#features">Fonctionnalités</a>
-        <a href="#how-it-works">Comment ça marche</a>
-        <a href="#tech-stack">Technologies</a>
-        <a href="#architecture">Architecture</a>
-        <a href="https://github.com/LahsenAitOiahmane/vaultdex.web" target="_blank" class="nav-cta">⭐ GitHub</a>
-      </div>
-      <button class="nav-mobile-toggle" id="mobileToggle" aria-label="Menu">☰</button>
+<!-- ═══════════════════════════════════ NAV ═══════════════════════════════════ -->
+<nav>
+  <a href="#hero" class="nav-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
-  </nav>
+    VaultDex
+    <span class="nav-version">v1.0.0</span>
+  </a>
+  <div class="nav-links">
+    <a href="#probleme">Problème</a>
+    <a href="#solution">Solution</a>
+    <a href="#pipeline">Pipeline</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#equipe">Équipe</a>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span id="themeTxt">Clair</span>
+    </button>
+  </div>
+</nav>
 
-  <!-- ===== HERO ===== -->
-  <section class="hero" id="hero">
-    <div class="container">
-      <div class="hero-content">
+<!-- ═══════════════════════════════════ HERO ═════════════════════════════════ -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div>
         <div class="hero-badge">
-          <span class="pulse"></span>
-          Open Source — Licence MIT
+          <svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>
+          Projet Académique · ENSA Marrakech · 2026
         </div>
-        <h1>
-          Sécurisez vos apps
-          <span class="line2"><span class="gradient-text">Android</span> en profondeur</span>
-        </h1>
-        <p class="hero-desc">
-          Scanner de sécurité automatisé qui analyse le stockage local des APK Android pour détecter les vulnérabilités — mots de passe en clair, tokens API, bases non chiffrées.
-        </p>
+        <h1>Audit Android<br><em>Automatisé</em></h1>
+        <p class="hero-desc">VaultDex installe un APK sur un émulateur Genymotion, observe ce que l'application écrit sur le disque, et identifie les vulnérabilités critiques avec un moteur de 28 règles — de l'upload au rapport PDF en quelques minutes.</p>
         <div class="hero-actions">
-          <a href="https://github.com/LahsenAitOiahmane/vaultdex.web" target="_blank" class="btn-primary">
-            🚀 Commencer maintenant
+          <a href="artical.pdf" download="VaultDex_Article.pdf" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Télécharger l'Article
           </a>
-          <a href="https://youtu.be/i3LqUeckQQ4" target="_blank" class="btn-secondary">
-            ▶️ Voir la démo
+          <a href="https://github.com/LahsenAitOiahmane/vaultdex.web" class="btn btn-ghost" target="_blank">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+            Code Source
+          </a>
+          <a href="https://youtu.be/i3LqUeckQQ4" class="btn btn-ghost" target="_blank">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+            Voir la Démo
           </a>
         </div>
-        <div class="hero-stats">
-          <div class="hero-stat">
-            <div class="stat-value gradient-text">28</div>
-            <div class="stat-label">Règles de sécurité</div>
+        <div class="hero-meta">
+          <div class="hero-meta-item">
+            <span class="hero-meta-label">Règles</span>
+            <span class="hero-meta-val">28 règles</span>
           </div>
-          <div class="hero-stat">
-            <div class="stat-value gradient-text">100</div>
-            <div class="stat-label">Score sur 100</div>
+          <div class="hero-meta-item">
+            <span class="hero-meta-label">Stack</span>
+            <span class="hero-meta-val">FastAPI · React</span>
           </div>
-          <div class="hero-stat">
-            <div class="stat-value gradient-text">PDF</div>
-            <div class="stat-label">Export rapport</div>
+          <div class="hero-meta-item">
+            <span class="hero-meta-label">Licence</span>
+            <span class="hero-meta-val">MIT</span>
           </div>
         </div>
       </div>
-      <div class="hero-visual">
-        <img src="assets/images/hero-dashboard.png" alt="VaultDex Dashboard — Interface d'analyse de sécurité Android" loading="eager">
-        <div class="hero-float-card card-1">
-          <span class="icon">✅</span>
-          <span>Scan terminé — Score: <strong class="gradient-text">87/100</strong></span>
-        </div>
-        <div class="hero-float-card card-2">
-          <span class="icon">🔐</span>
-          <span>28 règles vérifiées</span>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- ===== FEATURES ===== -->
-  <section class="features" id="features">
-    <div class="container">
-      <span class="section-badge">🔍 Fonctionnalités</span>
-      <h2 class="section-title">Audit de sécurité <span class="gradient-text">complet</span></h2>
-      <p class="section-subtitle">De l'analyse statique à l'inspection dynamique du stockage, chaque vulnérabilité est identifiée et évaluée.</p>
-      <div class="features-grid">
-        <div class="feature-card reveal">
-          <div class="feature-icon cyan">🔍</div>
-          <h3>Analyse Statique</h3>
-          <p>Extraction automatique des permissions, composants exportés et drapeaux de sécurité directement depuis le manifest APK.</p>
-        </div>
-        <div class="feature-card reveal">
-          <div class="feature-icon purple">📱</div>
-          <h3>Analyse Dynamique</h3>
-          <p>Installation sur émulateur Genymotion et interaction manuelle pour observer le comportement réel de l'application.</p>
-        </div>
-        <div class="feature-card reveal">
-          <div class="feature-icon green">🗄️</div>
-          <h3>Inspection Stockage</h3>
-          <p>Audit complet de SharedPreferences, bases SQLite, fichiers temporaires et cache applicatif de l'application.</p>
-        </div>
-        <div class="feature-card reveal">
-          <div class="feature-icon blue">📊</div>
-          <h3>Score de Risque</h3>
-          <p>Algorithme de scoring sophistiqué attribuant une note de 0 à 100 avec répartition par sévérité CRITICAL, HIGH, MEDIUM, LOW.</p>
-        </div>
-        <div class="feature-card reveal">
-          <div class="feature-icon red">📄</div>
-          <h3>Export PDF</h3>
-          <p>Génération de rapports professionnels au format PDF avec toutes les vulnérabilités détaillées et les recommandations.</p>
-        </div>
-        <div class="feature-card reveal">
-          <div class="feature-icon orange">🔑</div>
-          <h3>Multi-Utilisateurs</h3>
-          <p>Authentification JWT sécurisée avec isolation des données par utilisateur et gestion complète des sessions.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== HOW IT WORKS ===== -->
-  <section class="how-it-works" id="how-it-works">
-    <div class="container">
-      <span class="section-badge">⚡ Processus</span>
-      <h2 class="section-title">Comment ça <span class="gradient-text">marche</span> ?</h2>
-      <p class="section-subtitle">Un pipeline en deux phases conçu pour une analyse approfondie et fiable de chaque application.</p>
-      <div class="steps">
-        <div class="step reveal">
-          <div class="step-number">1</div>
-          <div class="step-connector"></div>
-          <h3>Upload APK</h3>
-          <p>Uploadez votre fichier APK depuis le dashboard. Validation automatique de l'intégrité et du format.</p>
-        </div>
-        <div class="step reveal">
-          <div class="step-number">2</div>
-          <div class="step-connector"></div>
-          <h3>Installation & Lancement</h3>
-          <p>L'APK est installé sur l'émulateur Android. Interagissez manuellement avec l'app pour générer des données.</p>
-        </div>
-        <div class="step reveal">
-          <div class="step-number">3</div>
-          <div class="step-connector"></div>
-          <h3>Extraction & Analyse</h3>
-          <p>Le stockage local est extrait et les 28 règles de sécurité sont exécutées automatiquement.</p>
-        </div>
-        <div class="step reveal">
-          <div class="step-number">4</div>
-          <h3>Rapport Détaillé</h3>
-          <p>Un rapport complet est généré avec le score de risque, les vulnérabilités et les corrections suggérées.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== TECH STACK ===== -->
-  <section class="tech-stack" id="tech-stack">
-    <div class="container">
-      <span class="section-badge">🛠️ Technologies</span>
-      <h2 class="section-title">Stack <span class="gradient-text">Technique</span></h2>
-      <p class="section-subtitle">Construit avec les technologies les plus modernes pour la performance et la fiabilité.</p>
-      <div class="tech-grid">
-        <div class="tech-item reveal"><div class="tech-emoji">⚡</div><div class="tech-name">FastAPI</div><div class="tech-desc">Backend async</div></div>
-        <div class="tech-item reveal"><div class="tech-emoji">⚛️</div><div class="tech-name">React 19</div><div class="tech-desc">Frontend UI</div></div>
-        <div class="tech-item reveal"><div class="tech-emoji">🟦</div><div class="tech-name">TypeScript</div><div class="tech-desc">Typage statique</div></div>
-        <div class="tech-item reveal"><div class="tech-emoji">🐘</div><div class="tech-name">PostgreSQL</div><div class="tech-desc">Base de données</div></div>
-        <div class="tech-item reveal"><div class="tech-emoji">🔴</div><div class="tech-name">Redis</div><div class="tech-desc">Cache & Broker</div></div>
-        <div class="tech-item reveal"><div class="tech-emoji">🥬</div><div class="tech-name">Celery</div><div class="tech-desc">Tâches async</div></div>
-        <div class="tech-item reveal"><div class="tech-emoji">🐳</div><div class="tech-name">Docker</div><div class="tech-desc">Conteneurisation</div></div>
-        <div class="tech-item reveal"><div class="tech-emoji">🌬️</div><div class="tech-name">TailwindCSS</div><div class="tech-desc">Styling</div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== STATS ===== -->
-  <section class="stats-section">
-    <div class="container">
-      <div class="stats-row">
-        <div class="stat-card reveal">
-          <div class="stat-num gradient-text" data-count="28">0</div>
-          <div class="stat-lbl">Règles de sécurité</div>
-        </div>
-        <div class="stat-card reveal">
-          <div class="stat-num gradient-text" data-count="5">0</div>
-          <div class="stat-lbl">Catégories d'analyse</div>
-        </div>
-        <div class="stat-card reveal">
-          <div class="stat-num gradient-text" data-count="4">0</div>
-          <div class="stat-lbl">Niveaux de sévérité</div>
-        </div>
-        <div class="stat-card reveal">
-          <div class="stat-num gradient-text" data-count="100">0</div>
-          <div class="stat-lbl">Score maximum</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== ARCHITECTURE ===== -->
-  <section class="architecture" id="architecture">
-    <div class="container">
-      <span class="section-badge">🏗️ Architecture</span>
-      <h2 class="section-title">Architecture <span class="gradient-text">Système</span></h2>
-      <p class="section-subtitle">Une architecture microservices moderne, scalable et sécurisée.</p>
-      <div class="arch-visual reveal">
-        <div class="arch-diagram">
-          <div class="arch-col">
-            <div class="arch-col-title">🌐 Frontend</div>
-            <div class="arch-node"><div class="node-icon">⚛️</div><div class="node-title">React Dashboard</div><div class="node-desc">Vite + TypeScript + TailwindCSS</div></div>
-            <div class="arch-node"><div class="node-icon">📊</div><div class="node-title">Recharts</div><div class="node-desc">Graphiques interactifs</div></div>
-            <div class="arch-node"><div class="node-icon">🎬</div><div class="node-title">Framer Motion</div><div class="node-desc">Animations fluides</div></div>
+      <!-- Scan Report Mockup -->
+      <div class="hero-mockup">
+        <div class="scan-card">
+          <div class="scan-card-header">
+            <div>
+              <div class="scan-card-title">Rapport de Scan</div>
+              <div class="scan-card-sub">com.example.banking · 24.3 MB</div>
+            </div>
+            <div class="score-badge">
+              <div class="score-num">78</div>
+              <div class="score-label">Élevé</div>
+            </div>
           </div>
-          <div class="arch-col">
-            <div class="arch-col-title">⚡ Backend</div>
-            <div class="arch-node"><div class="node-icon">🚀</div><div class="node-title">FastAPI</div><div class="node-desc">REST API + SSE + JWT</div></div>
-            <div class="arch-node"><div class="node-icon">🥬</div><div class="node-title">Celery Worker</div><div class="node-desc">Pipeline en 2 phases</div></div>
-            <div class="arch-node"><div class="node-icon">🔍</div><div class="node-title">Analysis Engine</div><div class="node-desc">28 règles de sécurité</div></div>
+          <div class="scan-score-bar">
+            <div class="score-bar-track"><div class="score-bar-fill"></div></div>
+            <div class="score-bar-labels"><span>0</span><span>Score de risque</span><span>100</span></div>
           </div>
-          <div class="arch-col">
-            <div class="arch-col-title">🗄️ Infrastructure</div>
-            <div class="arch-node"><div class="node-icon">🐘</div><div class="node-title">PostgreSQL 16</div><div class="node-desc">SQLAlchemy async</div></div>
-            <div class="arch-node"><div class="node-icon">🔴</div><div class="node-title">Redis 7</div><div class="node-desc">Message broker</div></div>
-            <div class="arch-node"><div class="node-icon">📱</div><div class="node-title">Genymotion</div><div class="node-desc">Émulateur Android + ADB</div></div>
+          <div class="findings-list">
+            <div class="finding-row critical">
+              <div class="finding-label"><div class="finding-dot"></div>CRITICAL</div>
+              <div class="finding-count">3 findings</div>
+            </div>
+            <div class="finding-row high">
+              <div class="finding-label"><div class="finding-dot"></div>HIGH</div>
+              <div class="finding-count">5 findings</div>
+            </div>
+            <div class="finding-row medium">
+              <div class="finding-label"><div class="finding-dot"></div>MEDIUM</div>
+              <div class="finding-count">8 findings</div>
+            </div>
+            <div class="finding-row low">
+              <div class="finding-label"><div class="finding-dot"></div>LOW</div>
+              <div class="finding-count">2 findings</div>
+            </div>
+          </div>
+          <!-- Mini Terminal -->
+          <div class="terminal-mini">
+            <div class="terminal-bar-mini">
+              <div class="tdot tdot-r"></div>
+              <div class="tdot tdot-y"></div>
+              <div class="tdot tdot-g"></div>
+            </div>
+            <div class="terminal-body">
+              <div class="tl ok"><span class="prompt">✓</span> APK validé (24.3 MB)</div>
+              <div class="tl ok"><span class="prompt">✓</span> Manifest — 12 permissions</div>
+              <div class="tl ok"><span class="prompt">✓</span> Émulateur restauré (snapshot)</div>
+              <div class="tl ok"><span class="prompt">✓</span> APK installé via ADB</div>
+              <div class="tl wait"><span class="prompt">⏸</span> Interaction manuelle...</div>
+              <div class="tl ok"><span class="prompt">✓</span> Stockage extrait — 847 fichiers</div>
+              <div class="tl ok"><span class="prompt">✓</span> 28 règles appliquées</div>
+              <div class="tl done"><span class="prompt">→</span> Score: 78/100 — Rapport PDF prêt</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ===== SECURITY RULES ===== -->
-  <section class="security-rules" id="security-rules">
-    <div class="container">
-      <span class="section-badge">🔐 Détection</span>
-      <h2 class="section-title">Règles de <span class="gradient-text">Sécurité</span></h2>
-      <p class="section-subtitle">28 règles couvrant les catégories les plus critiques de vulnérabilités Android.</p>
-      <div class="rules-grid">
-        <div class="rule-item reveal"><span class="rule-icon">🔑</span><span class="rule-text">Mots de passe en texte clair</span><span class="rule-severity critical">Critical</span></div>
-        <div class="rule-item reveal"><span class="rule-icon">🎫</span><span class="rule-text">Tokens API & JWT exposés</span><span class="rule-severity critical">Critical</span></div>
-        <div class="rule-item reveal"><span class="rule-icon">🗝️</span><span class="rule-text">Clés de chiffrement en clair</span><span class="rule-severity critical">Critical</span></div>
-        <div class="rule-item reveal"><span class="rule-icon">📧</span><span class="rule-text">Données personnelles (PII)</span><span class="rule-severity high">High</span></div>
-        <div class="rule-item reveal"><span class="rule-icon">🔓</span><span class="rule-text">Bases SQLite non chiffrées</span><span class="rule-severity high">High</span></div>
-        <div class="rule-item reveal"><span class="rule-icon">⚙️</span><span class="rule-text">Configurations dangereuses</span><span class="rule-severity high">High</span></div>
-        <div class="rule-item reveal"><span class="rule-icon">🔒</span><span class="rule-text">Cryptographie faible (MD5, SHA1)</span><span class="rule-severity medium">Medium</span></div>
-        <div class="rule-item reveal"><span class="rule-icon">📁</span><span class="rule-text">Fichiers sensibles dans le cache</span><span class="rule-severity medium">Medium</span></div>
-      </div>
+<!-- Stats Strip -->
+<div class="container">
+  <div class="stats-strip reveal">
+    <div class="stat-block">
+      <div class="stat-num">80%</div>
+      <div class="stat-title">Des apps Android vulnérables</div>
+      <div class="stat-desc">stockent des données sensibles localement sans chiffrement adéquat.</div>
     </div>
-  </section>
+    <div class="stat-block">
+      <div class="stat-num">6,8 Md</div>
+      <div class="stat-title">Appareils Android exposés</div>
+      <div class="stat-desc">dans le monde susceptibles d'être exploités via le stockage local.</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-num">287 j</div>
+      <div class="stat-title">Délai moyen de détection</div>
+      <div class="stat-desc">pour identifier une fuite de données — VaultDex le ramène à quelques minutes.</div>
+    </div>
+  </div>
+</div>
 
-  <!-- ===== CTA ===== -->
-  <section class="cta-section">
-    <div class="container">
-      <div class="cta-box reveal">
-        <h2>Prêt à sécuriser vos <span class="gradient-text">applications</span> ?</h2>
-        <p>Open source et gratuit. Clonez le dépôt, configurez votre environnement et lancez votre premier scan.</p>
-        <div class="cta-actions">
-          <a href="https://github.com/LahsenAitOiahmane/vaultdex.web" target="_blank" class="btn-primary">🚀 Cloner le projet</a>
-          <a href="https://youtu.be/i3LqUeckQQ4" target="_blank" class="btn-secondary">📚 Documentation</a>
+<!-- ═════════════════════════════════ PROBLÈME ════════════════════════════════ -->
+<section id="probleme">
+  <div class="container">
+    <div class="section-eyebrow">La Problématique</div>
+    <h2>Ce que les apps cachent sur vos appareils</h2>
+    <p class="section-lead">Les développeurs supposent que le sandbox Android protège les données locales. C'est une hypothèse dangereuse — voici ce qu'on trouve réellement dans le stockage.</p>
+
+    <div class="problem-grid reveal">
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-file">SharedPreferences.xml</span>
+          <span class="code-severity sev-critical">Critical</span>
+        </div>
+        <div class="code-content">
+          <span class="code-key">&lt;string</span> name=<span class="code-str">"password"</span><span class="code-key">&gt;</span><span class="code-hl">admin123</span><span class="code-key">&lt;/string&gt;</span><br>
+          <span class="code-key">&lt;string</span> name=<span class="code-str">"auth_token"</span><span class="code-key">&gt;</span><br>
+          &nbsp;&nbsp;<span class="code-hl">eyJhbGciOiJIUzI1NiIsInR...</span><br>
+          <span class="code-key">&lt;/string&gt;</span><br>
+          <span class="code-key">&lt;string</span> name=<span class="code-str">"api_key"</span><span class="code-key">&gt;</span><span class="code-hl">sk-live-xK9mN2...</span><span class="code-key">&lt;/string&gt;</span>
+        </div>
+      </div>
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-file">config.json (cache)</span>
+          <span class="code-severity sev-critical">Critical</span>
+        </div>
+        <div class="code-content">
+          <span class="code-key">{</span><br>
+          &nbsp;&nbsp;<span class="code-str">"aws_access_key"</span>: <span class="code-hl">"AKIAIOSFODNN7EXAMPLE"</span>,<br>
+          &nbsp;&nbsp;<span class="code-str">"firebase_secret"</span>: <span class="code-hl">"abc123XYZprod"</span>,<br>
+          &nbsp;&nbsp;<span class="code-str">"stripe_key"</span>: <span class="code-hl">"sk_live_aBcDe..."</span>,<br>
+          &nbsp;&nbsp;<span class="code-str">"debug"</span>: <span class="code-hl-amber">true</span><br>
+          <span class="code-key">}</span>
+        </div>
+      </div>
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-file">users.db — table sessions</span>
+          <span class="code-severity sev-high">High</span>
+        </div>
+        <div class="code-content">
+          <span class="code-comment">-- SELECT * FROM sessions;</span><br>
+          id | user_id | <span class="code-hl">token</span> | email<br>
+          ---+---------+-------+------<br>
+          1  | 42      | <span class="code-hl">eyJhbG...</span> | user@example.com<br>
+          2  | 18      | <span class="code-hl">Bearer...</span> | admin@corp.com
+        </div>
+      </div>
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="code-file">AndroidManifest.xml</span>
+          <span class="code-severity sev-high">High</span>
+        </div>
+        <div class="code-content">
+          <span class="code-key">&lt;application</span><br>
+          &nbsp;&nbsp;<span class="code-key">android:debuggable=</span><span class="code-hl">"true"</span><br>
+          &nbsp;&nbsp;<span class="code-key">android:allowBackup=</span><span class="code-hl">"true"</span><br>
+          &nbsp;&nbsp;<span class="code-key">android:networkSecurityConfig</span>=<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-hl">"@xml/debug_network"</span><br>
+          <span class="code-key">&gt;</span>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- ===== FOOTER ===== -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <div class="footer-logo">
-            <span class="logo-icon">🛡️</span>
-            <span>Vault<span class="gradient-text">Dex</span></span>
+    <div class="problem-impact reveal reveal-d1">
+      <div class="impact-icon">⚠️</div>
+      <div class="impact-text">
+        <strong>Un audit manuel prend plusieurs jours.</strong> Les outils existants sont fragmentés : certains font de l'analyse statique, d'autres de l'extraction ADB, aucun ne fait tout automatiquement. Il n'existe pas de solution bout-en-bout qui prend un APK et sort un rapport complet — <strong>jusqu'à VaultDex.</strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════ SOLUTION ════════════════════════════════ -->
+<section id="solution" style="padding-top:0;">
+  <div class="container">
+    <div class="section-eyebrow">Notre Solution</div>
+    <h2>Une plateforme d'analyse dynamique complète</h2>
+    <p class="section-lead">Pas un simple scanner statique — VaultDex exécute réellement l'application sur un émulateur pour capturer son empreinte de stockage réelle.</p>
+
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="m15 5 4 4"/><path d="M13 7 8.7 2.7a2.72 2.72 0 0 0-3.86 3.86L9 11"/><path d="m9 11 2 2a2.72 2.72 0 0 1 3.86-3.86L19 13"/><path d="M8 16a2 2 0 0 0 2 2"/><path d="M15 12 9.7 17.3a2.72 2.72 0 0 1-3.86-3.86L9 11"/></svg>
+        </div>
+        <h3>Analyse Dynamique</h3>
+        <p>L'APK est installé sur un émulateur Genymotion réel. Le comportement de l'app est simulé pour capturer les données écrites au runtime.</p>
+      </div>
+      <div class="feature-card reveal reveal-d1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+        </div>
+        <h3>28 Règles de Sécurité</h3>
+        <p>Credentials, PII, cryptographie faible, configurations dangereuses — 4 catégories, 28 patterns de détection basés sur des regex ciblées.</p>
+      </div>
+      <div class="feature-card reveal reveal-d2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2v4"/><path d="m6.343 6.343-2.829-2.829"/><path d="M2 12h4"/><path d="m6.343 17.657-2.829 2.829"/><path d="M12 18v4"/><path d="m17.657 17.657 2.829 2.829"/><path d="M18 12h4"/><path d="m17.657 6.343 2.829-2.829"/><circle cx="12" cy="12" r="4"/></svg>
+        </div>
+        <h3>Score de Risque 0–100</h3>
+        <p>Algorithme déterministe : Critical = 25 pts, High = 10 pts, Medium = 3 pts, Low = 1 pt. Répartition claire par niveau de criticité.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        </div>
+        <h3>Export PDF Natif</h3>
+        <p>Rapport complet généré côté client via jsPDF — en un clic, sans serveur supplémentaire, prêt à être remis à l'équipe de développement.</p>
+      </div>
+      <div class="feature-card reveal reveal-d1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Plateforme Multi-Tenant</h3>
+        <p>Authentification JWT stricte — chaque auditeur ne voit que ses propres scans. Rate limiting 5 req/min, headers sécurité, validation magic bytes.</p>
+      </div>
+      <div class="feature-card reveal reveal-d2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h3>Temps Réel via SSE</h3>
+        <p>Chaque étape du pipeline est streamée vers le navigateur via Server-Sent Events — sans polling, l'utilisateur voit l'avancement en direct.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════ PIPELINE ════════════════════════════════ -->
+<section id="pipeline">
+  <div class="container">
+    <div class="section-eyebrow">Pipeline de Scan</div>
+    <h2>Deux phases, un processus entièrement automatisé</h2>
+    <p class="section-lead">De l'upload de l'APK au rapport final, VaultDex orchestre 13 étapes distinctes réparties en deux phases séparées par une interaction manuelle de l'auditeur.</p>
+
+    <div class="pipeline-wrapper reveal">
+      <div class="pipeline-phase-label phase-a-label">Phase A — Installation & Lancement</div>
+      <div class="pipeline-steps" style="margin-bottom:1.5rem;">
+        <div class="pipeline-step">
+          <div class="step-pill pill-a">INIT</div>
+          <div class="step-desc">Validation APK</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-a">STATIC</div>
+          <div class="step-desc">Manifest via aapt2</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-a">RESET</div>
+          <div class="step-desc">Snapshot propre</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-a">BOOT</div>
+          <div class="step-desc">Android ready</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-a">INSTALL</div>
+          <div class="step-desc">APK via ADB</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-a">LAUNCH</div>
+          <div class="step-desc">App démarrée</div>
+        </div>
+      </div>
+
+      <div class="pipeline-phase-label phase-interaction-label">Interaction Manuelle</div>
+      <div class="pipeline-steps" style="margin-bottom:1.5rem;">
+        <div class="pipeline-step" style="flex:0 0 auto;">
+          <div class="step-pill pill-int">⏸ WAITING</div>
+          <div class="step-desc">Auditeur interagit avec l'app pour forcer l'écriture sur disque</div>
+        </div>
+      </div>
+
+      <div class="pipeline-phase-label phase-b-label">Phase B — Extraction & Analyse</div>
+      <div class="pipeline-steps">
+        <div class="pipeline-step">
+          <div class="step-pill pill-b">PULL</div>
+          <div class="step-desc">ADB pull stockage</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-b">CLEANUP</div>
+          <div class="step-desc">Désinstallation</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-b">ZIP</div>
+          <div class="step-desc">Archive dump</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-b">ANALYSE</div>
+          <div class="step-desc">28 règles</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-b">REPORT</div>
+          <div class="step-desc">Score + JSON</div>
+        </div>
+        <div class="pipeline-step">
+          <div class="step-pill pill-done">DONE</div>
+          <div class="step-desc">PDF disponible</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════ ARCHITECTURE ════════════════════════════ -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-eyebrow">Architecture</div>
+    <h2>Micro-services asynchrones, scalables</h2>
+    <p class="section-lead">VaultDex repose sur une architecture découplée avec communication temps réel via SSE — chaque composant est indépendant et remplaçable.</p>
+
+    <div class="arch-diagram-2 reveal">
+      <div class="arch-stack">
+        <div class="arch-layer-2" style="margin-bottom:1rem;">
+          <div class="arch-layer-title-2">Frontend — React 19</div>
+          <div class="arch-layer-sub">TypeScript · Vite · TailwindCSS v4</div>
+          <div class="arch-tags" style="margin-top:0.6rem;">
+            <span class="arch-tag blue">Recharts</span>
+            <span class="arch-tag blue">Framer Motion</span>
+            <span class="arch-tag blue">jsPDF</span>
+            <span class="arch-tag blue">Axios + SSE</span>
           </div>
-          <p>Scanner de sécurité automatisé pour applications Android. Protégez vos utilisateurs contre les vulnérabilités de stockage local.</p>
-          <div class="footer-social">
-            <a href="https://github.com/LahsenAitOiahmane/vaultdex.web" target="_blank" aria-label="GitHub">🐙</a>
-            <a href="https://youtu.be/i3LqUeckQQ4" target="_blank" aria-label="YouTube">▶️</a>
+        </div>
+        <div style="text-align:center;padding:0.5rem 0;font-size:0.75rem;color:var(--muted);">↕ HTTP/REST · Server-Sent Events</div>
+        <div class="arch-layer-2" style="margin-bottom:1rem;">
+          <div class="arch-layer-title-2">API — FastAPI</div>
+          <div class="arch-layer-sub">Python 3.13 · SQLAlchemy 2 · Pydantic v2</div>
+          <div class="arch-tags" style="margin-top:0.6rem;">
+            <span class="arch-tag">JWT Auth</span>
+            <span class="arch-tag">Rate Limiting</span>
+            <span class="arch-tag">defusedxml</span>
+            <span class="arch-tag">bcrypt</span>
           </div>
         </div>
-        <div class="footer-col">
-          <h4>Produit</h4>
-          <ul>
-            <li><a href="#features">Fonctionnalités</a></li>
-            <li><a href="#how-it-works">Comment ça marche</a></li>
-            <li><a href="#security-rules">Règles de sécurité</a></li>
-            <li><a href="#architecture">Architecture</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h4>Technologies</h4>
-          <ul>
-            <li><a href="#tech-stack">FastAPI</a></li>
-            <li><a href="#tech-stack">React 19</a></li>
-            <li><a href="#tech-stack">PostgreSQL</a></li>
-            <li><a href="#tech-stack">Docker</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h4>Ressources</h4>
-          <ul>
-            <li><a href="https://github.com/LahsenAitOiahmane/vaultdex.web" target="_blank">Code source</a></li>
-            <li><a href="https://youtu.be/i3LqUeckQQ4" target="_blank">Démo vidéo</a></li>
-            <li><a href="https://github.com/LahsenAitOiahmane/vaultdex.web/blob/main/LICENSE" target="_blank">Licence MIT</a></li>
-          </ul>
+        <div style="text-align:center;padding:0.5rem 0;font-size:0.75rem;color:var(--muted);">↕ Redis Message Broker</div>
+        <div class="arch-layer-2">
+          <div class="arch-layer-title-2">Worker — Celery</div>
+          <div class="arch-layer-sub">Tâches async · Pipeline en 2 phases</div>
+          <div class="arch-tags" style="margin-top:0.6rem;">
+            <span class="arch-tag amber">ADB Controller</span>
+            <span class="arch-tag amber">Genymotion API</span>
+            <span class="arch-tag amber">Rules Engine</span>
+          </div>
         </div>
       </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 VaultDex. Tous droits réservés. Licence MIT.</p>
-        <p>Fait avec ❤️ par l'équipe VaultDex</p>
+
+      <div style="padding:0 2rem;display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center;">
+        <div style="width:1px;flex:1;background:var(--border);min-height:30px;"></div>
+        <div style="font-size:0.65rem;color:var(--muted);text-align:center;writing-mode:vertical-rl;letter-spacing:1px;text-transform:uppercase;">Infrastructure</div>
+        <div style="width:1px;flex:1;background:var(--border);min-height:30px;"></div>
+      </div>
+
+      <div class="arch-side">
+        <div class="arch-side-card">
+          <div class="arch-side-title">PostgreSQL 16</div>
+          <div class="arch-side-sub">Scans · Reports (JSONB) · Users</div>
+        </div>
+        <div class="arch-side-card">
+          <div class="arch-side-title">Redis 7</div>
+          <div class="arch-side-sub">Celery broker · Task queue</div>
+        </div>
+        <div class="arch-side-card">
+          <div class="arch-side-title">Docker Compose</div>
+          <div class="arch-side-sub">Orchestration · 4 services</div>
+        </div>
+        <div class="arch-side-card">
+          <div class="arch-side-title">ADB + Genymotion</div>
+          <div class="arch-side-sub">Émulateur Android · aapt2 · APK install</div>
+        </div>
+        <div class="arch-sse-note">
+          ⚡ Progression temps réel : Server-Sent Events streamés vers le navigateur — zéro polling, zéro rafraîchissement.
+        </div>
       </div>
     </div>
-  </footer>
+  </div>
+</section>
 
-  <!-- ===== SCRIPTS ===== -->
-  <script>
-    // Navbar scroll effect
-    const navbar = document.getElementById('navbar');
-    window.addEventListener('scroll', () => {
-      navbar.classList.toggle('scrolled', window.scrollY > 50);
+<!-- ═══════════════════════════════ SECURITY ENGINE ══════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-eyebrow">Moteur d'Analyse</div>
+    <h2>28 règles, 4 catégories de vulnérabilités</h2>
+    <p class="section-lead">Chaque règle est un pattern regex ciblé appliqué à tous les fichiers extraits — SharedPreferences, SQLite, fichiers génériques et cache applicatif.</p>
+
+    <div class="rules-grid">
+      <div class="rule-card reveal">
+        <div class="rule-card-header">
+          <div class="rule-category">Credentials</div>
+          <div class="rule-badge" style="background:var(--red-light);color:var(--red);">8 règles</div>
+        </div>
+        <ul class="rule-list">
+          <li>Mots de passe en clair</li>
+          <li>Tokens JWT complets</li>
+          <li>Clés API cloud (AWS, Firebase, Stripe)</li>
+          <li>Identifiants OAuth / secrets Twilio</li>
+        </ul>
+      </div>
+      <div class="rule-card reveal reveal-d1">
+        <div class="rule-card-header">
+          <div class="rule-category">Données Personnelles (PII)</div>
+          <div class="rule-badge" style="background:var(--amber-light);color:var(--amber);">7 règles</div>
+        </div>
+        <ul class="rule-list">
+          <li>Adresses e-mail</li>
+          <li>Numéros de téléphone</li>
+          <li>Numéros de carte bancaire</li>
+          <li>Numéros de sécurité sociale</li>
+          <li>Adresses IP internes</li>
+        </ul>
+      </div>
+      <div class="rule-card reveal">
+        <div class="rule-card-header">
+          <div class="rule-category">Cryptographie Faible</div>
+          <div class="rule-badge" style="background:rgba(167,139,250,0.1);color:#a78bfa;">6 règles</div>
+        </div>
+        <ul class="rule-list">
+          <li>Clés AES/RSA exposées en clair</li>
+          <li>Algorithmes obsolètes (MD5, SHA1)</li>
+          <li>Seeds d'entropy insuffisants</li>
+          <li>IV / nonce réutilisés</li>
+        </ul>
+      </div>
+      <div class="rule-card reveal reveal-d1">
+        <div class="rule-card-header">
+          <div class="rule-category">Configurations Dangereuses</div>
+          <div class="rule-badge" style="background:var(--accent-light);color:var(--accent);">7 règles</div>
+        </div>
+        <ul class="rule-list">
+          <li>debuggable=true en production</li>
+          <li>allowBackup=true</li>
+          <li>Composants exportés sans permission</li>
+          <li>Flags réseau dangereux</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="score-formula reveal">
+      <div class="formula-code">score = min(100, Σ poids × count)</div>
+      <div class="formula-weights">
+        <div class="weight-item">
+          <div class="weight-pts" style="color:var(--red);">25 pts</div>
+          <div class="weight-sev" style="color:var(--muted);">Critical</div>
+        </div>
+        <div class="weight-item">
+          <div class="weight-pts" style="color:var(--amber);">10 pts</div>
+          <div class="weight-sev" style="color:var(--muted);">High</div>
+        </div>
+        <div class="weight-item">
+          <div class="weight-pts" style="color:#60a5fa;">3 pts</div>
+          <div class="weight-sev" style="color:var(--muted);">Medium</div>
+        </div>
+        <div class="weight-item">
+          <div class="weight-pts" style="color:var(--accent);">1 pt</div>
+          <div class="weight-sev" style="color:var(--muted);">Low</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ COMPARAISON ══════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-eyebrow">Positionnement</div>
+    <h2>VaultDex vs les alternatives</h2>
+    <p class="section-lead">Le seul outil qui combine analyse dynamique, extraction ADB automatisée et rapport PDF en une seule plateforme open-source.</p>
+
+    <div class="compare-table-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>Fonctionnalité</th>
+            <th class="col-vaultdex vd-header">VaultDex</th>
+            <th>Audit Manuel</th>
+            <th>MobSF</th>
+            <th>Drozer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="feature-name">Analyse dynamique réelle</span></td>
+            <td class="col-vaultdex"><span class="check-yes">✓</span></td>
+            <td><span class="check-yes" style="color:var(--amber);">~</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-yes" style="color:var(--amber);">~</span></td>
+          </tr>
+          <tr>
+            <td><span class="feature-name">Extraction ADB automatique</span></td>
+            <td class="col-vaultdex"><span class="check-yes">✓</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-partial">CLI</span></td>
+          </tr>
+          <tr>
+            <td><span class="feature-name">28 règles de détection</span></td>
+            <td class="col-vaultdex"><span class="check-yes">✓</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-partial">Partiel</span></td>
+            <td><span class="check-no">✗</span></td>
+          </tr>
+          <tr>
+            <td><span class="feature-name">Score de risque 0–100</span></td>
+            <td class="col-vaultdex"><span class="check-yes">✓</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-partial">Partiel</span></td>
+            <td><span class="check-no">✗</span></td>
+          </tr>
+          <tr>
+            <td><span class="feature-name">Export PDF en 1 clic</span></td>
+            <td class="col-vaultdex"><span class="check-yes">✓</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+          </tr>
+          <tr>
+            <td><span class="feature-name">Interface web multi-tenant</span></td>
+            <td class="col-vaultdex"><span class="check-yes">✓</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-partial">Limité</span></td>
+            <td><span class="check-no">✗</span></td>
+          </tr>
+          <tr>
+            <td><span class="feature-name">Progression temps réel</span></td>
+            <td class="col-vaultdex"><span class="check-yes">✓</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+            <td><span class="check-no">✗</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ STACK ════════════════════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-eyebrow">Stack Technique</div>
+    <h2>Technologies utilisées</h2>
+    <div class="stack-groups reveal">
+      <div class="stack-group">
+        <div class="stack-group-label">Backend</div>
+        <div class="stack-tags">
+          <span class="stack-tag">Python 3.13</span>
+          <span class="stack-tag">FastAPI</span>
+          <span class="stack-tag">Celery</span>
+          <span class="stack-tag">SQLAlchemy 2.0</span>
+          <span class="stack-tag">Pydantic v2</span>
+          <span class="stack-tag">python-jose</span>
+          <span class="stack-tag">bcrypt</span>
+          <span class="stack-tag">defusedxml</span>
+          <span class="stack-tag">slowapi</span>
+        </div>
+      </div>
+      <div class="stack-group">
+        <div class="stack-group-label">Frontend</div>
+        <div class="stack-tags">
+          <span class="stack-tag">React 19</span>
+          <span class="stack-tag">TypeScript</span>
+          <span class="stack-tag">Vite</span>
+          <span class="stack-tag">TailwindCSS v4</span>
+          <span class="stack-tag">Recharts</span>
+          <span class="stack-tag">Framer Motion</span>
+          <span class="stack-tag">jsPDF</span>
+          <span class="stack-tag">Axios + SSE</span>
+        </div>
+      </div>
+      <div class="stack-group">
+        <div class="stack-group-label">Infra</div>
+        <div class="stack-tags">
+          <span class="stack-tag">PostgreSQL 16</span>
+          <span class="stack-tag">Redis 7</span>
+          <span class="stack-tag">Docker Compose</span>
+          <span class="stack-tag">Genymotion</span>
+          <span class="stack-tag">ADB</span>
+          <span class="stack-tag">aapt2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ ÉQUIPE ═══════════════════════════════════ -->
+<section id="equipe">
+  <div class="container">
+    <div class="section-eyebrow">Équipe</div>
+    <h2>Auteurs du Projet</h2>
+
+    <div class="university-card reveal">
+      <div class="univ-icon">
+        <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      </div>
+      <div>
+        <div class="univ-name">Université Cadi Ayyad — ENSA Marrakech</div>
+        <div class="univ-prog">Génie CyberDefense et Systèmes de Télécom Embarqués · 4ème année · 2026</div>
+      </div>
+    </div>
+
+    <div class="team-grid">
+      <div class="team-card reveal">
+        <div class="avatar av-1">AA</div>
+        <div class="team-name">Abdelhakim Amhiraq</div>
+        <div class="team-role">Étudiant Ingénierie</div>
+        <div class="team-contact"><span class="no-contact">Pas de contact public</span></div>
+      </div>
+      <div class="team-card reveal reveal-d1">
+        <div class="avatar av-2">AA</div>
+        <div class="team-name">Anas Aourik</div>
+        <div class="team-role">Étudiant Ingénierie</div>
+        <div class="team-contact"><span class="no-contact">Pas de contact public</span></div>
+      </div>
+      <div class="team-card reveal reveal-d2">
+        <div class="avatar av-3">LA</div>
+        <div class="team-name">Lahsen Ait Oihmane</div>
+        <div class="team-role">Étudiant Ingénierie</div>
+        <div class="team-contact"><a href="mailto:l.aitoihmane7493@uca.ac.ma" class="contact-link">Envoyer un Email</a></div>
+      </div>
+      <div class="team-card reveal reveal-d3">
+        <div class="avatar av-4">SZ</div>
+        <div class="team-name">Sultan Zeineddine</div>
+        <div class="team-role">Étudiant Ingénierie</div>
+        <div class="team-contact"><a href="mailto:s.zeineddine0023@uca.ac.ma" class="contact-link">Envoyer un Email</a></div>
+      </div>
+    </div>
+
+    <div class="prof-card reveal">
+      <div class="univ-icon" style="background:var(--amber-light);width:44px;height:44px;border-radius:10px;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--amber);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div>
+        <div class="prof-label">Encadrant</div>
+        <div class="prof-name">Professeur Mohamed Lachgar</div>
+        <div class="prof-email"><a href="mailto:m.lachgar@uca.ac.ma" style="color:var(--accent);">m.lachgar@uca.ac.ma</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ FOOTER ═══════════════════════════════════ -->
+<footer>
+  <div class="footer-left">
+    <div class="footer-logo">VaultDex</div>
+    <div class="footer-meta">Audit Automatisé de Sécurité Android · v1.0.0 · Licence MIT · ENSA Marrakech 2026</div>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/LahsenAitOiahmane/vaultdex.web" target="_blank">GitHub</a>
+    <a href="https://youtu.be/i3LqUeckQQ4" target="_blank">Démo</a>
+    <a href="mailto:l.aitoihmane7493@uca.ac.ma">Contact</a>
+  </div>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('themeTxt').textContent = isDark ? 'Sombre' : 'Clair';
+    const icon = document.getElementById('themeIcon');
+    icon.innerHTML = isDark
+      ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+      : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    localStorage.setItem('vd-theme', isDark ? 'light' : 'dark');
+  }
+
+  const saved = localStorage.getItem('vd-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  if (saved === 'light') {
+    document.getElementById('themeTxt').textContent = 'Sombre';
+    document.getElementById('themeIcon').innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  }
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
     });
-
-    // Mobile menu toggle
-    const mobileToggle = document.getElementById('mobileToggle');
-    const navLinks = document.getElementById('navLinks');
-    mobileToggle.addEventListener('click', () => {
-      navLinks.classList.toggle('active');
-      mobileToggle.textContent = navLinks.classList.contains('active') ? '✕' : '☰';
-    });
-
-    // Smooth scroll for nav links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          navLinks.classList.remove('active');
-          mobileToggle.textContent = '☰';
-        }
-      });
-    });
-
-    // Scroll reveal animations
-    const revealElements = document.querySelectorAll('.reveal');
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry, index) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => entry.target.classList.add('visible'), index * 80);
-          revealObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-    revealElements.forEach(el => revealObserver.observe(el));
-
-    // Counter animation
-    const counters = document.querySelectorAll('[data-count]');
-    const counterObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const el = entry.target;
-          const target = parseInt(el.dataset.count);
-          let current = 0;
-          const step = Math.max(1, Math.floor(target / 40));
-          const timer = setInterval(() => {
-            current += step;
-            if (current >= target) { current = target; clearInterval(timer); }
-            el.textContent = current;
-          }, 30);
-          counterObserver.unobserve(el);
-        }
-      });
-    }, { threshold: 0.5 });
-    counters.forEach(c => counterObserver.observe(c));
-
-    // Parallax effect on hero visual
-    window.addEventListener('scroll', () => {
-      const scrolled = window.scrollY;
-      const heroVisual = document.querySelector('.hero-visual');
-      if (heroVisual && scrolled < window.innerHeight) {
-        heroVisual.style.transform = `translateY(${scrolled * 0.1}px)`;
-      }
-    });
-  </script>
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
 </body>
 </html>
